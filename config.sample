@@ -1,0 +1,15 @@
+{
+  "modules":[
+    {
+      "id":"pistachio",
+      "module":"devman-pistachio",
+      "options":{
+        "search":"\\.(?:tpl|js)$",
+        "replace":".pistachio"
+      }
+    }
+  ],
+  "rules":[
+    { "name":"templates", "files":"**/*.js", "aggregate":false, "module":"pistachio" }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name":"Development Manager",
+  "description":"Refreshes your project during development",
+  "version":"0.1.0",
+  "main":"./devman.js",
+  "dependencies":{
+    "async":"*",
+    "argv":"*",
+    "glob":"*"
+  },
+  "copyright":"© 2013 by Philipp Dunkel <p.dunkel@me.com>. Licensed under MIT License."
+}
