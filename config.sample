@@ -3,13 +3,15 @@
     {
       "id":"pistachio",
       "module":"devman-pistachio",
-      "options":{
-        "search":"\\.(?:tpl|js)$",
-        "replace":".pistachio"
-      }
+      "options":{}
     }
   ],
   "rules":[
-    { "name":"templates", "files":"**/*.js", "aggregate":false, "module":"pistachio" }
+    {
+      "name":"server-templates",
+      "module":"pistachio",
+      "source":"/Users/philipp/Documents/durchblicker/website/templates/**/*.tpl",
+      "target":{ "search":"\\.(?:tpl)$", "replace":".pistachio" }
+    }
   ]
 }

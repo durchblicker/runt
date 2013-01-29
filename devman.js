@@ -7,7 +7,7 @@ var async = require('async');
 var watch = require('./lib/watchfiles.js');
 
 require('./lib/config.js')(global.ARGV.options.config, function(err, config) {
-  if (err) error(err);
+  if (err) return error(err);
   if (global.ARGV.options['show-config']) console.log(JSON.stringify(config, undefined, '  '));
   buildAll(config, function() {
     watchAll(config, function() {
@@ -19,51 +19,78 @@ require('./lib/config.js')(global.ARGV.options.config, function(err, config) {
 function buildAll(config, callback) {
   if (!global.ARGV.options.build) return callback();
   console.log('Building');
-  async.forEach(config.rules, build.bind(config, config), function(err) {
+  async.forEach(config.rules, function(rule, callback) {
+    async.forEach(rule.source, function(source, callback) {
+      var target;
+      switch(typeof rule.target) {
+        case 'object':
+          if (rule.target.search && rule.target.replace) {
+            target=source.path.replace(new RegExp(rule.target.search), rule.target.replace);
+            break;
+          }
+        default:
+          target=String(target);
+      }
+
+      config.moduleIndex[rule.module].module(source.path, target, function(err) {
+        if (err) {
+          status(rule.name+' ('+status.file(target)+')', false);
+          error(err);
+          return callback(err);
+        }
+        status(rule.name+' ('+status.file(target)+')', true);
+        return callback(err);
+      });
+    }, callback);
+  }, function(err) {
     if (err) error(err);
-    console.log('Building complete');
-    return callback();
+    status('Building', err?false:true);
+    return callback(err);
   });
 }
+
+function status(text, success) {
+  text=String(text);
+  while(text.length < (100 - 12)) text+=' ';
+  text += '[ '+(success?'DONE':'FAIL')+' ]';
+  console.log(text);
+}
+status.file = function(file) {
+  var max=68;
+  return (file.length > max)?('…'+file.substr(-1*(max-1))):file;
+};
 
 function watchAll(config, callback) {
   if (!global.ARGV.options.watch) return callback();
+  console.log('Watching Sources');
   async.forEach(config.rules, function(rule, callback) {
-    watch(rule.files, function(err, watcher) {
-      if (err) return callback(err);
-      watcher.on('modified', fileModified.bind(rule, config, rule, watcher));
-    });
+    async.forEach(rule.source, function(source, callback) {
+      watch(source.dependencies || [ source ], function(err, watcher) {
+        if (err) return callback(err);
+        watcher.on('modified', fileModified.bind(rule, config, rule, source, watcher));
+      });
+    }, callback);
   }, callback);
 }
 
-function fileModified(config, rule, watcher, file) {
-  console.log('Building '+rule.name+' ('+file.path+')');
-  build(config, rule, file, function(err) {
-    if (err) return error(err);
-    console.log('Building '+rule.name+' ('+file.path+') complete');
-  });
-}
-
-function build(config, rule, file, callback) {
-  if (('function' === typeof file) && !callback) {
-    callback = file;
-    file = undefined;
+function fileModified(config, rule, source, watcher, file) {
+  console.log('Modified '+rule.name+' ('+file.path+')');
+  var target;
+  switch(typeof rule.target) {
+    case 'object':
+      if (rule.target.search && rule.target.replace) {
+        target=source.path.replace(new RegExp(rule.target.search), rule.target.replace);
+        break;
+      }
+    default:
+      target=String(target);
   }
-  var module = config.modules.filter(function(module) { return module.id===rule.module; }).shift();
-  if (!module) return error(new Error('Missing Module!'));
-  var files = (file && !rule.aggregate) ? rule.files.filter(function(item) { return item.path===file.path; }) : rule.files;
-  files = !rule.aggregate ? files.slice(0,1) : files;
-  console.log('Build '+rule.name+' ('+files.length+')');
-  async.forEach(files, function(file, callback) {
-    try {
-      module.module(rule, file, module.options, callback);
-    } catch(err) {
-      return callback(err);
+  config.moduleIndex[rule.module].module(source.path, target, function(err) {
+    if (err) {
+      status(rule.name+' ('+status.file(target)+')',false);
+      return error(err);
     }
-  }, function(err) {
-    if (err) callback(err);
-    console.log('Build '+rule.name+' complete');
-    callback();
+    status(rule.name+' ('+status.file(target)+')',true);
   });
 }
 
