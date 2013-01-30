@@ -2,16 +2,92 @@
   "modules":[
     {
       "id":"pistachio",
-      "module":"devman-pistachio",
-      "options":{}
+      "module":"mod/pistachio",
+      "options":{
+        "documentRoot":"../durchblicker/website/html/",
+        "compress":true
+      }
+    },
+    {
+      "id":"uglify",
+      "module":"mod/uglify",
+      "options":{
+        "documentRoot":"../durchblicker/website/html/",
+        "compress":{}
+      }
+    },
+    {
+      "id":"less",
+      "module":"mod/less",
+      "options":{
+        "documentRoot":"../durchblicker/website/html/",
+        "compress":{}
+      }
     }
   ],
   "rules":[
     {
       "name":"server-templates",
       "module":"pistachio",
-      "source":"/Users/philipp/Documents/durchblicker/website/templates/**/*.tpl",
+      "source":"../durchblicker/website/templates/**/*.tpl",
       "target":{ "search":"\\.(?:tpl)$", "replace":".pistachio" }
+    },
+    {
+      "name":"browser-templates",
+      "module":"pistachio",
+      "source":"../durchblicker/website/html/templates/**/*.tpl",
+      "target":{ "search":"\\.(?:tpl)$", "replace":".pistachio" }
+    },
+    {
+      "name":"styles",
+      "module":"less",
+      "source":"../durchblicker/website/html/res/css/styles.less",
+      "target":"../durchblicker/website/html/res/css/styles.css"
+    },
+    {
+      "name":"scripts",
+      "module":"uglify",
+      "source":[
+        "../durchblicker/website/html/res/jquery/jquery.js",
+        "../durchblicker/website/html/res/jquery/jquery.datepicker.js",
+        "../durchblicker/website/html/res/jquery/jquery.transit.js",
+        "../durchblicker/website/html/res/jquery/jquery.inputmask.js",
+        "../durchblicker/website/html/res/jquery/jquery.inputmask.date.extensions.js",
+        "../durchblicker/website/html/res/jquery/jquery.cookie.js",
+        "../durchblicker/website/html/res/js/awesomechart.js",
+        "../durchblicker/website/html/res/js/select2.js",
+        "../durchblicker/website/html/res/bootstrap/js/bootstrap-tooltip.js",
+        "../durchblicker/website/html/res/bootstrap/js/bootstrap-popover.js",
+        "../durchblicker/website/html/res/bootstrap/js/bootstrap-transition.js",
+        "../durchblicker/website/html/res/bootstrap/js/bootstrap-dropdown.js",
+        "../durchblicker/website/html/res/bootstrap/js/bootstrap-collapse.js",
+        "../durchblicker/website/html/res/bootstrap/js/bootstrap-alert.js",
+        "../durchblicker/website/html/res/bootstrap/js/bootstrap-modal.js",
+        "../durchblicker/website/html/res/bootstrap/js/bootstrap-typeahead.js",
+        "../durchblicker/website/html/res/js/analytics.js",
+        "../durchblicker/website/html/res/js/browserdedection.js",
+        "../durchblicker/website/html/res/js/json.js",
+        "../durchblicker/website/html/res/js/utils.js",
+        "../durchblicker/website/html/res/js/utils/async.js",
+        "../durchblicker/website/html/res/js/date.all.js",
+        "../durchblicker/website/html/res/js/storage.js",
+        "../durchblicker/website/html/res/js/api.js",
+        "../durchblicker/website/html/res/js/calculate/calculate.js",
+        "../durchblicker/website/html/res/js/pistachio.js",
+        "../durchblicker/website/html/res/js/navigation.js",
+        "../durchblicker/website/html/res/js/forms/assistent.js",
+        "../durchblicker/website/html/res/js/forms/zip.js",
+        "../durchblicker/website/html/res/js/forms/mask.js",
+        "../durchblicker/website/html/res/js/forms/utils.js",
+        "../durchblicker/website/html/res/js/object.js",
+        "../durchblicker/website/html/res/js/responsive.js",
+        "../durchblicker/website/html/res/js/urlparser.js",
+        "../durchblicker/website/html/res/js/data-input.js",
+        "../durchblicker/website/html/res/js/variator.js",
+        "../durchblicker/website/html/res/js/eurotax.js",
+        "../durchblicker/website/html/res/js/tracking.js"
+      ],
+      "target":"../durchblicker/website/html/res/js/scripts.js"
     }
   ]
 }

@@ -1,12 +1,18 @@
 {
-  "name":"Development Manager",
-  "description":"Refreshes your project during development",
+  "name":"runt",
+  "description":"Refreshes your project during development and builds it when done",
   "version":"0.1.0",
   "main":"./devman.js",
+  "bin":{
+    "runt":"./devman.js"
+  },
   "dependencies":{
-    "async":"*",
     "argv":"*",
-    "glob":"*"
+    "async":"*",
+    "glob":"*",
+    "less":"*",
+    "uglify-js":"*",
+    "pistachio":">=0.2.0"
   },
   "copyright":"© 2013 by Philipp Dunkel <p.dunkel@me.com>. Licensed under MIT License."
 }
