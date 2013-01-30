@@ -29,7 +29,7 @@ function compile(source, target, options, callback) {
   });
 }
 
-function find(file, callback) {
+function find(file, options, callback) {
   fs.readFile(file.path, 'utf-8', function(err, less) {
     if (err) return callback(err);
     var comment;

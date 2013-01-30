@@ -10,7 +10,7 @@ var fs = require('fs');
 var async = require('async');
 
 function compile(source, target, options, callback) {
-  options.documentRoot = path.normalize(options.documentRoot+'/');
+  options.documentRoot = path.normalize(this.resolve(options.documentRoot)+'/');
   options.outSourceMap = path.relative(options.documentRoot, target+'.map');
   options.sourceRoot = '/';
   var result = UglifyJS.minify(this.source.map(function(s) { return s.path; }), options);

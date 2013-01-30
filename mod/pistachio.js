@@ -15,7 +15,7 @@ function compile(source, target, options, callback) {
   });
 }
 
-function dependencies(source, callback) {
+function dependencies(source, options, callback) {
   pistachio.parse(source.path, function(err, template) {
     if (err) return callback(err);
     var partials=template.partials();
