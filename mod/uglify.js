@@ -13,7 +13,8 @@ function compile(source, target, options, callback) {
   options.documentRoot = path.normalize(this.resolve(options.documentRoot)+'/');
   options.outSourceMap = path.relative(options.documentRoot, target+'.map');
   options.sourceRoot = '/';
-  var result = UglifyJS.minify(this.source.map(function(s) { return s.path; }), options);
+  var sources = this.source.map(function(s) { return s.path; });
+  var result = UglifyJS.minify(sources, options);
   async.forEach([
     { path:target, content:[ result.code, '//@ sourceMappingURL=/'+options.outSourceMap ].join('\n\n') },
     { path:target+'.map', content:String(result.map).split(options.documentRoot).join('') }
