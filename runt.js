@@ -98,7 +98,7 @@ function fileModified(config, rule, source, watcher, file) {
 
 function error(msg) {
   [].concat(arguments).forEach(function(msg) {
-    console.error('ERROR:', msg);
+    console.error('ERROR:', (msg instanceof Error)?msg.stack:msg);
   });
 }
 

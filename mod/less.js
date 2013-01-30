@@ -29,8 +29,8 @@ function compile(source, target, options, callback) {
   });
 }
 
-function find(file, options, callback) {
-  fs.readFile(file.path, 'utf-8', function(err, less) {
+function find(file, callback) {
+  fs.readFile(file, 'utf-8', function(err, less) {
     if (err) return callback(err);
     var comment;
     less = less.split(/\r?\n/).map(function(line) {
@@ -46,19 +46,20 @@ function find(file, options, callback) {
       if (/\s*\/\//.test(line)) return;
 
       var match = find.match.exec(line);
-      return match ? path.resolve(path.dirname(file.path), match[1]) : undefined;
+      return match ? path.resolve(path.dirname(file), match[1]) : undefined;
     }).filter(function(match) {
       return match && match.length;
     });
     async.map(less, find, function(err, imports) {
-      imports = Array.prototype.concat.apply([ file.path ], imports || []);
+      if (err) err.source = file;
+      imports = Array.prototype.concat.apply([ file ], imports || []);
       return callback(err, imports);
     });
   });
 }
 find.match = /\s*\@import\s+\"([^\"]+)";/;
 
-function dependencies(file, callback) {
+function dependencies(file, options, callback) {
   find(file.path, function(err, depends) {
     if (err) return callback(err);
     var res={};
