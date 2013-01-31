@@ -19,7 +19,7 @@ function compile(source, target, options, callback) {
     { path:target, content:[ result.code, '//@ sourceMappingURL='+options.outSourceMap ].join('\n\n') },
     { path:target+'.map', content:String(result.map).split(options.documentRoot).join('/') }
   ], function(file, callback) {
-    console.log('Writing('+file.content.length+'): ',file.path);
+    //console.log('Writing('+file.content.length+'): ',file.path);
     fs.writeFile(file.path, file.content, callback);
   }, callback);
 }
