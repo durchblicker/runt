@@ -1,7 +1,7 @@
 {
   "name":"runt",
   "description":"Refreshes your project during development and builds it when done",
-  "version":"0.1.5",
+  "version":"0.1.6",
   "main":"./runt.js",
   "bin":{
     "runt":"./runt.js"

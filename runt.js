@@ -51,12 +51,24 @@ function buildAll(config, callback) {
   });
 }
 
-function status(text, success) {
+var status;
+(function() {
+  try {
+    growl = require('growl');
+    status = function(text, success) {
+      growl(text, { name:'runt', title:'Runt build: '+(success?'OK':'FAILED') });
+      status.console(text, success);
+    };
+  } catch(ex) {
+    status = function(text, success) { return status.console(text,success); };
+  }
+}());
+status.console = function(text, success) {
   text=String(text);
   while(text.length < (100 - 12)) text+=' ';
   text += '[ '+(success?'DONE':'FAIL')+' ]';
   console.log(text);
-}
+};
 status.file = function(file) {
   var max=68;
   return (file.length > max)?('…'+file.substr(-1*(max-1))):file;

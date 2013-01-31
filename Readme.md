@@ -18,4 +18,8 @@ Install:
 
 Use:
 
-    runt --config=<config-file> [--quiet] [--build] [--watch] [--show-config]
+    runt [--config=<config-file>] [--quiet] [--build] [--watch] [--show-config]
+
+The default for *--config* is *./runt.json*
+
+Now grunt support is also available. If the [growl node module](https://npmjs.org/package/growl) is available and functional it is used to also display a notification when a build item is completed.
