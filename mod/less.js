@@ -12,7 +12,7 @@ var async = require('async');
 
 function compile(source, target, options, callback) {
   var parser = new Parser({
-    paths:path.dirname(source.path),
+    paths:[ path.dirname(source.path) ],
     filename:source.path
   });
   fs.readFile(source.path, 'utf-8', function(err, less) {
