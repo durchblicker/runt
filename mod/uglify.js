@@ -10,10 +10,16 @@ var fs = require('fs');
 var async = require('async');
 
 function compile(source, target, options, callback) {
+  var sources;
   options.documentRoot = path.normalize(this.resolve(options.documentRoot)+'/');
+  if (('object' === typeof target) && target.search && target.replace) {
+    target = source.path.replace(new RegExp(target.search,'g'), target.replace);
+    sources = [ source.path ];
+  } else {
+    sources = this.source.map(function(s) { return s.path; });
+  }
+
   options.outSourceMap = path.basename(target+'.map');
-  //options.sourceRoot = '/';
-  var sources = this.source.map(function(s) { return s.path; });
   var result = UglifyJS.minify(sources, options);
   async.forEach([
     { path:target, content:[ result.code, '//@ sourceMappingURL='+options.outSourceMap ].join('\n\n') },
