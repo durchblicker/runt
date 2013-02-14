@@ -11,7 +11,7 @@ var fs = require('fs');
 function compile(source, target, options, callback) {
   pistachio(source.path, function(err, template) {
     if (err) return callback(err);
-    fs.writeFile(target, template.code(), 'utf-8', callback);
+    fs.writeFile(target, template.code(options), 'utf-8', callback);
   });
 }
 
