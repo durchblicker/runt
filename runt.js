@@ -6,51 +6,9 @@
 
 require('./lib/options.js');
 var async = require('async');
-var watch = require('./lib/watchfiles.js');
+var watch = require('./lib/watch.js');
 
-require('./lib/config.js')(global.ARGV.options.config, loadModule, function(err, config) {
-  if (err) return error(err);
-  if (global.ARGV.options['show-config']) console.log(JSON.stringify(config, undefined, '  '));
-  buildAll(config, function() {
-    watchAll(config, function() {
-      console.log(global.PACKAGE.copyright);
-    });
-  });
-});
-
-function buildAll(config, callback) {
-  if (!global.ARGV.options.build) return callback();
-  console.log('Building');
-  async.forEach(config.rules, function(rule, callback) {
-    async.forEach(('string' === typeof rule.target)?rule.source.slice(0,1):rule.source, function(source, callback) {
-      var target;
-      switch(typeof rule.target) {
-        case 'object':
-          if (rule.target.search && rule.target.replace) {
-            target=source.path.replace(new RegExp(rule.target.search), rule.target.replace);
-            break;
-          }
-        default:
-          target=String(rule.target);
-      }
-
-      config.moduleIndex[rule.module].module.call(rule, source, target, mergeOpts(config.moduleIndex[rule.module].options, rule.options), function(err) {
-        if (err) {
-          status(rule.name+' ('+status.file(target)+')', false);
-          error(err);
-          return callback(err);
-        }
-        status(rule.name+' ('+status.file(target)+')', true);
-        return callback(err);
-      });
-    }, callback);
-  }, function(err) {
-    if (err) error(err);
-    status('Building', err?false:true);
-    return callback(err);
-  });
-}
-
+var nextTick = ('function' === typeof setImmediate) ? setImmediate : process.nextTick;
 var status;
 (function() {
   try {
@@ -66,7 +24,7 @@ var status;
 status.console = function(text, success) {
   text=String(text);
   while(text.length < (100 - 12)) text+=' ';
-  text += '[ '+(success?'DONE':'FAIL')+' ]';
+  text += '[ '+(('string' === typeof success) ? (success.toUpperCase()+'     ').substr(0,4) : (success?'DONE':'FAIL'))+' ]';
   console.log(text);
 };
 status.file = function(file) {
@@ -74,37 +32,102 @@ status.file = function(file) {
   return (file.length > max)?('…'+file.substr(-1*(max-1))):file;
 };
 
-function watchAll(config, callback) {
-  if (!global.ARGV.options.watch) return callback();
-  console.log('Watching Sources');
-  async.forEach(config.rules, function(rule, callback) {
-    async.forEach(rule.source, function(source, callback) {
-      watch(source.dependencies || [ source ], function(err, watcher) {
-        if (err) return callback(err);
-        watcher.on('modified', fileModified.bind(rule, config, rule, source, watcher));
-      });
-    }, callback);
-  }, callback);
+status.console('Configuring', 'EXEC');
+require('./lib/config.js')(global.ARGV.options.config, loadModule, function(err, config) {
+  status.console('Configure: '+status.file(global.ARGV.options.config), err?false:true);
+  if (err) return error(err);
+  if (global.ARGV.options['show-config']) console.log(JSON.stringify(config, undefined, '  '));
+
+  buildAll(config, function(err) {
+    if (err) return console.error(err.stack);
+    watchAll(config, function(err) {
+      if (err) return console.error(err.stack);
+      console.log(global.PACKAGE.copyright);
+    });
+  });
+});
+
+function buildAll(config, callback) {
+  if (!global.ARGV.options.build) return callback();
+  status.console('Building','EXEC');
+  var tasks = {};
+  config.notify(function(target, source, compiler, cause, siblings, options) {
+    tasks[target] = {
+      compiler:compiler,
+      source:source,
+      target:target,
+      cause:cause,
+      siblings:siblings,
+      options:options
+    };
+  });
+  async.forEachLimit(Object.keys(tasks), 10, function(task, callback) {
+    task = tasks[task];
+    status.console(status.file(task.target), 'EXEC');
+    task.compiler(task.source, task.target, task.siblings, task.options, function(err) {
+      status.console(status.file(task.target),err?false:true);
+      if (err) console.error(err.stack);
+      callback();
+    });
+  }, function(err) {
+    status.console('Building', err?false:true);
+    if (err) error(err);
+    return callback(err);
+  });
 }
 
-function fileModified(config, rule, source, watcher, file) {
-  console.log('Modified '+rule.name+' ('+file.path+')');
-  var target;
-  switch(typeof rule.target) {
-    case 'object':
-      if (rule.target.search && rule.target.replace) {
-        target=source.path.replace(new RegExp(rule.target.search), rule.target.replace);
-        break;
-      }
-    default:
-      target=String(rule.target);
-  }
-  config.moduleIndex[rule.module].module.call(rule, source, target, mergeOpts(config.moduleIndex[rule.module].options, rule.options), function(err) {
-    if (err) {
-      status(rule.name+' ('+status.file(target)+')',false);
-      return error(err);
+function watchAll(config, callback) {
+  if (!global.ARGV.options.watch) return callback();
+  status.console('Gathering Dependencies','EXEC');
+  config.checkDepend(function(err) {
+    status.console('Gathering Dependencies', !err);
+    var tasks;
+    function trigger(target, source, compiler, cause, siblings, options) {
+      status.console(status.file(cause),'DELTA');
+      tasks = start();
+      tasks[target] = {
+        compiler:compiler,
+        source:source,
+        target:target,
+        cause:cause,
+        siblings:siblings,
+        options:options
+      };
     }
-    status(rule.name+' ('+status.file(target)+')',true);
+    function start() {
+      if (tasks) return tasks;
+      nextTick(function() {
+        async.whilst(function() {
+          if ('object' !== typeof tasks) return false;
+          var len = Object.keys(tasks).filter(function(target) { return tasks[target]?true:false; }).length;
+          if (!len) return tasks=false;
+          return true;
+        }, function(callback) {
+          var task = Object.keys(tasks).filter(function(target) {
+            return tasks[target]?true:false;
+          }).shift();
+          task = tasks[task];
+          tasks[task.target] = undefined;
+          delete tasks[task.target];
+          task.compiler(task.source, task.target, task.siblings, task.options, function(err) {
+            status(status.file(task.target),err?false:true);
+            if (err) console.error(err.stack);
+            callback(err);
+          });
+        }, function(err) {
+          if (err) error(err);
+          tasks=false;
+        });
+      });
+      return tasks={};
+    }
+    var files = [];
+    config.notify(function(target, source, compiler, cause, siblings, options) { files.push(cause); });
+    var watcher = watch(files, 5000);
+    watcher.on('error', error);
+    watcher.on('change', config.notify.bind(config, trigger));
+    status.console('Watching '+files.length+' files', ' OK ');
+    return callback();
   });
 }
 
@@ -114,31 +137,6 @@ function error(msg) {
   });
 }
 
-function mergeOpts(def, cst) {
-  def = def || {};
-  cst = cst || {};
-  var res = {};
-  Object.keys(def).forEach(function(key) {
-    switch(typeof def[key]) {
-      case 'object':
-        res[key] = mergeOpts({}, def[key]);
-        break;
-      default:
-        res[key] = def[key];
-    }
-  });
-  Object.keys(cst).forEach(function(key) {
-    switch(typeof cst[key]) {
-      case 'object':
-        res[key] = mergeOpts(res[key], cst[key]);
-        break;
-      default:
-        res[key] = cst[key];
-    }
-  });
-  return res;
-}
-
 function loadModule(mod) {
   try {
     return require(mod);
@@ -146,3 +144,4 @@ function loadModule(mod) {
     return require('./'+mod);
   }
 }
+

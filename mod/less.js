@@ -10,12 +10,12 @@ var fs = require('fs');
 var path = require('path');
 var async = require('async');
 
-function compile(source, target, options, callback) {
+function compile(source, target, siblings, options, callback) {
   var parser = new Parser({
-    paths:[ path.dirname(source.path) ],
-    filename:source.path
+    paths:[ path.dirname(source) ],
+    filename:source
   });
-  fs.readFile(source.path, 'utf-8', function(err, less) {
+  fs.readFile(source, 'utf-8', function(err, less) {
     parser.parse(less, function(err, tree) {
       if (err) return callback(err);
       try {
@@ -60,7 +60,7 @@ function find(file, callback) {
 find.match = /\s*\@import\s+\"([^\"]+)";/;
 
 function dependencies(file, options, callback) {
-  find(file.path, function(err, depends) {
+  find(file, function(err, depends) {
     if (err) return callback(err);
     var res={};
     (depends||[]).forEach(function(depend) {

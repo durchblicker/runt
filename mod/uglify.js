@@ -9,13 +9,13 @@ var path = require('path');
 var fs = require('fs');
 var async = require('async');
 
-function compile(source, target, options, callback) {
+function compile(source, target, siblings, options, callback) {
   var sources;
   options.documentRoot = path.normalize(this.resolve(options.documentRoot)+'/');
 
-  var sources = (options.aggregate) ? this.source.map(function(s) { return s.path; }) : [ source.path ];
+  var sources = (options.aggregate) ? siblings : [ source ];
   options.outSourceMap = path.basename(target+'.map');
-  
+
   var result = UglifyJS.minify(sources, options);
   async.forEach([
     { path:target, content:[ result.code, '//@ sourceMappingURL='+options.outSourceMap ].join('\n\n') },

@@ -8,9 +8,9 @@ var path = require('path');
 var fs = require('fs');
 var async = require('async');
 
-function compile(source, target, options, callback) {
+function compile(source, target, siblings, options, callback) {
   options.documentRoot = path.normalize(this.resolve(options.documentRoot)+'/');
-  var sources = this.source.map(function(s) { return s.path; });
+  var sources = siblings;
   async.map(sources, function(source, callback) {
     fs.readFile(source, 'utf-8', function(err, content) {
       return callback(err, { source:source, content:content });
