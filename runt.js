@@ -68,7 +68,7 @@ function buildAll(config, callback) {
       options: options
     };
   });
-  async.forEachLimit(Object.keys(tasks), 10, function(task, callback) {
+  async.forEachLimit(Object.keys(tasks), 1, function(task, callback) {
     task = tasks[task];
     status.console(status.file(task.target), 'EXEC');
     task.compiler(task.source, task.target, task.siblings, task.options, function(err) {

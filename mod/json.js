@@ -8,16 +8,16 @@ var fs = require('fs');
 
 function compile(source, target, siblings, options, callback) {
   fs.readFile(source, 'utf-8', function(err, txt) {
-    if (err) return callback(err);
+    if(err) return callback(err);
     try {
-      txt=JSON.stringify(JSON.parse(txt));
+      txt = JSON.stringify(JSON.parse(txt));
     } catch(ex) {
       return callback(ex);
     }
     var strings = [];
-    txt = txt.replace(/"[\s|\S]*?[^\\]"/g,function(match) {
+    txt = txt.replace(/"[\s|\S]*?[^\\]"/g, function(match) {
       strings.push(match);
-      return [ '\0\0\0', strings.length-1, '\0\0\0' ].join('');
+      return ['\u0000\u0000\u0000', strings.length - 1, '\u0000\u0000\u0000'].join('');
     });
     txt = txt.split(/\s/).join('');
     txt = txt.replace(/\u0000\u0000\u0000(\d+?)\u0000\u0000\u0000/g, function(match, string) {
