@@ -8,7 +8,7 @@ var fs = require('fs');
 
 function compile(source, target, siblings, options, callback) {
   fs.readFile(source, 'utf-8', function(err, txt) {
-    if (err) return callback(err);
+    if(err) return callback(err);
     try {
       JSON.parse(txt);
     } catch(ex) {

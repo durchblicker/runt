@@ -9,16 +9,19 @@ var fs = require('fs');
 var async = require('async');
 
 function compile(source, target, siblings, options, callback) {
-  options.documentRoot = path.normalize(this.resolve(options.documentRoot)+'/');
+  options.documentRoot = path.normalize(this.resolve(options.documentRoot) + '/');
   var sources = siblings;
   async.map(sources, function(source, callback) {
     fs.readFile(source, 'utf-8', function(err, content) {
-      return callback(err, { source:source, content:content });
+      return callback(err, {
+        source: source,
+        content: content
+      });
     });
   }, function(err, sources) {
-    if (err) return callback(err);
+    if(err) return callback(err);
 
-    var combine = compile[compile.combine||'noop'];
+    var combine = compile[compile.combine || 'noop'];
     combine = ('function' === typeof combine) ? combine : compile.noop;
 
     sources = sources.map(combine).join('\n');
@@ -27,23 +30,20 @@ function compile(source, target, siblings, options, callback) {
 }
 compile.console = function(file) {
   return [
-    '/* START: '+file.source+' */',
-    //'if (window.console && window.console.log) { window.console.log("START: '+file.source+'"); } else { alert("START: '+file.source+'"); }',
-    'try {',
-    file.content,
+    '/* START: ' + file.source + ' */',
+  //'if (window.console && window.console.log) { window.console.log("START: '+file.source+'"); } else { alert("START: '+file.source+'"); }',
+  'try {',
+  file.content,
     '} catch(err) {',
-    '  if (window.console && window.console.log) { window.console.log("ERROR("+err.message+"): '+file.source+'"); } else { alert("ERROR("+err.message+"): '+file.source+'"); }',
+    '  if (window.console && window.console.log) { window.console.log("ERROR("+err.message+"): ' + file.source + '"); } else { alert("ERROR("+err.message+"): ' + file.source + '"); }',
     '}',
-    //'if (window.console && window.console.log) { window.console.log("END: '+file.source+'"); } else { alert("END: '+file.source+'"); }',
-    '/* END: '+file.source+' */'
-  ].join('\n');
+  //'if (window.console && window.console.log) { window.console.log("END: '+file.source+'"); } else { alert("END: '+file.source+'"); }',
+  '/* END: ' + file.source + ' */'].join('\n');
 };
 compile.comment = function(file) {
   return [
-    '/* START: '+file.source+' */',
-    file.content,
-    '/* END: '+file.source+' */'
-  ].join('\n')
+  ('/* START: ' + file.source + ' */'),
+  file.content, ('/* END: ' + file.source + ' */')].join('\n');
 };
 compile.noop = function(file) {
   return file.content;
