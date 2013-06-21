@@ -14,11 +14,9 @@
     "uglify-js":"*",
     "pistachio":">=0.2.0"
   },
-  "repositories": [
-    {
-      "type": "git",
-      "url": "https://github.com/phidelta/runt.git"
-    }
-  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/phidelta/runt.git"
+  },
   "copyright":"© 2013 by Philipp Dunkel <p.dunkel@me.com>. Licensed under MIT License."
 }
