@@ -17,6 +17,7 @@ function compile(source, target, siblings, options, callback) {
 
     modules = Object.keys(modules).map(function(file) {
       modules[file].name = file.substr((options.sourceRoot||'').length);
+      modules[file].source = (options.sourcePrefix||'')+modules[file].source;
       Object.keys(modules[file].names).forEach(function(name) {
         modules[file].names[name] = modules[file].names[name].substr((options.sourceRoot||'').length);
       });
@@ -25,15 +26,24 @@ function compile(source, target, siblings, options, callback) {
     modules = order(modules);
     modules = modules.map(assemble);
 
-    modules.unshift({ name:'<require>', file:'<require>', uglify:requirefunc(), source:'function() { [magic] }' });
+    if (!options.norequire) modules.unshift({ name:'<require>', file:'<require>', uglify:requirefunc(), source:'function() { [magic] }' });
     var top = null;
     var sources = {};
-    modules.forEach(function(module) {
-      var name = (module.file==='<require>')?'<require>':module.file.substr((options.sourceRoot||'').length);
-      sources[name] = module.source;
-      top = UglifyJS.parse(module.uglify, { filename:name , toplevel: top });
-    });
-
+    try {
+      modules.forEach(function(module, idx) {
+        if (idx && !top) return;
+        var name = (module.file==='<require>')?'<require>':module.file.substr((options.sourceRoot||'').length);
+        sources[name] = module.source;
+        try {
+          top = UglifyJS.parse(module.uglify, { filename:name , toplevel: top });
+        } catch(ex) {
+          throw(new Error('Syntax Error: '+module.file));
+        }
+      });
+    } catch(err) {
+      return callback(err);
+    }
+    if (!top) return callback(new Error('Compile Error'));
     top.figure_out_scope();
     top = top.transform(UglifyJS.Compressor(options.compress));
     if (options.mangle !== false) {
@@ -139,6 +149,7 @@ function assemble(module) {
 function requirefunc() {
   var lines = [
      '(function(){'
+    ,'  if (window.require && window.require.d) return;'
     ,'  var m={};'
     ,'  function require(n) {'
     ,'    if(n===undefined) return m;'
