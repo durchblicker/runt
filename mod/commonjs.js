@@ -15,7 +15,13 @@ function compile(source, target, siblings, options, callback) {
   resolve({}, source, function(err, modules) {
     if (err) return callback(err);
 
-    modules = Object.keys(modules).map(function(file) { return modules[file]; }).filter(function(module) { return !!module; });
+    modules = Object.keys(modules).map(function(file) {
+      modules[file].name = file.substr((options.sourceRoot||'').length);
+      Object.keys(modules[file].names).forEach(function(name) {
+        modules[file].names[name] = modules[file].names[name].substr((options.sourceRoot||'').length);
+      });
+      return modules[file];
+    }).filter(function(module) { return !!module; });
     modules = order(modules);
     modules = modules.map(assemble);
 
@@ -123,9 +129,9 @@ function assemble(module) {
     return ['require(', module.names[name], ')'].join(quote);
   });
   module.uglify = [
-    '(function() { var module={ exports:{}, names:["'+module.file+'"] }; (function(module, exports, alias, define, __filename, __dirname) {',
+    '(function() { var module={ exports:{}, names:["'+module.name+'"] }; (function(module, exports, alias, define, __filename, __dirname) {',
     module.uglify,
-    '}(module, module.exports, function(name) { module.names.push(name); }, window.require.d, "'+module.file+'", "'+Path.dirname(module.file)+'"));for(var idx=0; idx<module.names.length; idx++) window.require.d(module.names[idx], module.exports);}())'
+    '}(module, module.exports, function(name) { module.names.push(name); }, window.require.d, "'+module.name+'", "'+Path.dirname(module.name)+'"));for(var idx=0; idx<module.names.length; idx++) window.require.d(module.names[idx], module.exports);}())'
   ].join('');
   return module;
 }
