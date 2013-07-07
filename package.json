@@ -1,23 +1,21 @@
 {
-  "name":"runt",
-  "description":"Refreshes your project during development and builds it when done",
-  "version":"0.2.6",
-  "main":"./runt.js",
-  "bin":{
-    "runt":"./runt.js"
+  "name": "runt",
+  "version": "0.2.1",
+  "description": "the better build system",
+  "main": "runt.js",
+  "author": {
+    "name": "Philipp Dunkel",
+    "email": "p.dunkel@me.com"
   },
-  "dependencies":{
-    "argv":"*",
-    "async":"*",
-    "glob":"*",
-    "less":"*",
-    "pea":"*",
-    "uglify-js":"*",
-    "pistachio":">=0.2.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/phidelta/runt.git"
-  },
-  "copyright":"© 2013 by Philipp Dunkel <p.dunkel@me.com>. Licensed under MIT License."
+  "dependencies": {
+    "commander": "~1.2.0",
+    "fsevents": "~0.1.4",
+    "less": "~1.4.1",
+    "merge": "*",
+    "minimatch": "*",
+    "pea": "*",
+    "pistachio": "~0.2.12",
+    "uglify-js": "~2.3.6",
+    "glob": "~3.2.1"
+  }
 }

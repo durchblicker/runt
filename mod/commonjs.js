@@ -2,16 +2,16 @@
 ** © 2013 by Philipp Dunkel <p.dunkel@me.com>. Licensed under MIT License.
 */
 
-module.exports = compile;
-module.exports.dependencies = dependencies;
+exports.individual = individual
+exports.options = options;
+exports.dependencies = dependencies;
 
 var UglifyJS = require('uglify-js');
 var Path = require('path');
 var Fs = require('fs');
 var Pea = require('pea');
 
-function compile(source, target, siblings, options, callback) {
-  options.sourceRoot = options.sourceRoot = Path.normalize(this.resolve(options.sourceRoot));
+function individual(source, target, options, callback) {
   resolve({}, source, function(err, modules) {
     if (err) return callback(err);
 
@@ -64,6 +64,11 @@ function compile(source, target, siblings, options, callback) {
       Fs.writeFile(Path.resolve(Path.dirname(target), Path.basename(target, '.js')+'.map'), top.map, callback);
     });
   });
+}
+
+function options(rule, callback) {
+  rule.options.sourceRoot = Path.normalize(Path.resolve(rule.base, rule.options.sourceRoot));
+  callback();
 }
 
 function dependencies(source, options, callback) {

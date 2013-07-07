@@ -2,12 +2,12 @@
 ** © 2013 by Philipp Dunkel <p.dunkel@me.com>. Licensed under MIT-License
 */
 
-module.exports = compile;
+exports.individual = individual;
 
-var fs = require('fs');
+var Fs = require('fs');
 
-function compile(source, target, siblings, options, callback) {
-  fs.readFile(source, 'utf-8', function(err, txt) {
+function individual(source, target, options, callback) {
+  Fs.readFile(source, 'utf-8', function(err, txt) {
     if(err) return callback(err);
     try {
       JSON.parse(txt);

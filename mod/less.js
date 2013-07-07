@@ -2,62 +2,52 @@
 ** © 2013 by Philipp Dunkel <p.dunkel@me.com>. Licensed under MIT-License
 */
 
-module.exports = compile;
-module.exports.dependencies = dependencies;
+exports.individual = individual;
+exports.dependencies = dependencies;
 
 var Parser = require('less').Parser;
-var fs = require('fs');
-var path = require('path');
-var async = require('async');
+var Fs = require('fs');
+var Path = require('path');
 
-function compile(source, target, siblings, options, callback) {
+function individual(source, target, options, callback) {
   var parser = new Parser({
-    paths: [path.dirname(source)],
+    paths: [Path.dirname(source)],
     filename: source
   });
-  fs.readFile(source, 'utf-8', function(err, less) {
+  Fs.readFile(source, 'utf-8', function(err, less) {
     parser.parse(less, function(err, tree) {
       if(err) return callback(err);
       try {
         tree = tree.toCSS(options);
       } catch(ex) {
-        console.error('ERROR', ex);
         return callback(err);
       }
-      fs.writeFile(target, tree, callback);
+      Fs.writeFile(target, tree, callback);
     });
   });
 }
 
-function find(file, callback) {
-  fs.readFile(file, 'utf-8', function(err, less) {
-    if(err) return callback(err);
-    var comment;
-    less = less.split(/\r?\n/).map(function(line) {
-      if(/\*\//.test(line)) {
-        comment = false;
-        return;
-      }
-      if(comment) return;
-      if(/\/\*/.test(line)) {
-        comment = true;
-        return;
-      }
-      if(/\s*\/\//.test(line)) return;
-
-      var match = find.match.exec(line);
-      return match ? path.resolve(path.dirname(file), match[1]) : undefined;
-    }).filter(function(match) {
-      return match && match.length;
+function extract(file, callback) {
+  callback = arguments[arguments.length-1];
+  var base = Path.dirname(file);
+  var imports = [];
+  Pea(Fs.readFile, file, 'utf-8').success(function(cnt) {
+    cnt = cnt.replace(/\/\*[\S|\s]*?\*\//,g,'\n');
+    cnt.split(/\r?\n/).forEach(function(line) {
+      line = line.trim().replace(/\/\/.*$/,'');
+      (/\s*\@import\s+\"([^\"]+)";/).exec(line, function(match, child) {
+        imports.push(Path.resolve(base, child));
+      });
     });
-    async.map(less, find, function(err, imports) {
-      if(err) err.source = file;
-      imports = Array.prototype.concat.apply([file], imports || []);
-      return callback(err, imports);
-    });
-  });
+  }).failure(callback);
+  if (!imports.length) {
+    Pea.map(imports, extract).success(function(children) {
+      callback(null, Array.prototype.concat.apply(imports, children));
+    }).failure(callback);
+  } else {
+    callback(null, imports);
+  }
 }
-find.match = /\s*\@import\s+\"([^\"]+)";/;
 
 function dependencies(file, options, callback) {
   find(file, function(err, depends) {

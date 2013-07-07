@@ -2,23 +2,33 @@
 ** © 2013 by Philipp Dunkel <p.dunkel@me.com>. Licensed under MIT License.
 */
 
-module.exports = compile;
-module.exports.dependencies = dependencies;
+exports.individual = individual;
+exports.dependencies = dependencies;
 
-var pistachio = require('pistachio').parse;
-var fs = require('fs');
+var Pistachio = require('pistachio');
+var Fs = require('fs');
+var Pea = require('pea');
 
-function compile(source, target, siblings, options, callback) {
-  pistachio(source, options, function(err, template) {
-    if(err) return callback(err);
-    fs.writeFile(target, template.code(options), 'utf-8', callback);
+function individual(source, target, options, callback) {
+  Pistachio.compile(source, options, function(err, code) {
+    if (err) return callback(err);
+    Fs.writeFile(target, code, callback);
   });
 }
 
-function dependencies(source, options, callback) {
-  pistachio(source, function(err, template) {
-    if(err) return callback(err);
-    var partials = template.partials();
-    return callback(undefined, partials);
-  });
+function dependencies(templates, callback) {
+  var result = [];
+  Pea.map(templates, function(file, callback) {
+    callback=arguments[arguments.length-1];
+    Pea(Pistachio.parse, file).success(function(tpl) {
+      var parts = tpl.partials();
+      result = result.concat(parts);
+      callback();
+    }).failure(callback);
+  }).success(function() {
+    var res = {};
+    result.forEach(function(file) { res[file]=true; });
+    result = Object.keys(res).sort(function(a,b) { return a.length-b.length; });
+    callback(null, result);
+  }).failure(callback);
 }

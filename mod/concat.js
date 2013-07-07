@@ -2,32 +2,30 @@
 ** © 2013 by Philipp Dunkel <p.dunkel@me.com>. Licensed under MIT-License
 */
 
-module.exports = compile;
+exports.aggregate = aggregate
 
+var Pea = require('pea');
 var path = require('path');
-var fs = require('fs');
-var async = require('async');
+var Fs = require('fs');
 
-function compile(source, target, siblings, options, callback) {
-  options.documentRoot = path.normalize(this.resolve(options.documentRoot) + '/');
-  var sources = siblings;
-  async.map(sources, function(source, callback) {
-    fs.readFile(source, 'utf-8', function(err, content) {
+function aggregate(sources, target, options, callback) {
+  Pea.map(sources, function(source, callback) {
+    callback = arguments[arguments.length - 1];
+    Fs.readFile(source, 'utf-8', function(err, content) {
       return callback(err, {
         source: source,
         content: content
       });
     });
-  }, function(err, sources) {
-    if(err) return callback(err);
-
+  }).success(function(sources) {
     var combine = compile[compile.combine || 'noop'];
     combine = ('function' === typeof combine) ? combine : compile.noop;
-
     sources = sources.map(combine).join('\n');
-    fs.writeFile(target, sources, callback);
-  });
+    Fs.writeFile(target, sources, callback);
+  }).failure(callback);
 }
+
+var compile={};
 compile.console = function(file) {
   return [
     '/* START: ' + file.source + ' */',

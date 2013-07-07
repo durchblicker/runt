@@ -2,29 +2,31 @@
 ** © 2013 by Philipp Dunkel <p.dunkel@me.com>. Licensed under MIT License.
 */
 
-module.exports = compile;
+exports.aggregate = aggregate;
+exports.individual = individual;
+exports.options = options;
 
+var Pea = require('pea');
 var UglifyJS = require('uglify-js');
-var path = require('path');
-var fs = require('fs');
-var async = require('async');
+var Path = require('path');
+var Fs = require('fs');
 
-function compile(source, target, siblings, options, callback) {
+function aggregate(sources, target, options, callback) {
   var sources;
-  options.documentRoot = path.normalize(this.resolve(options.documentRoot) + '/');
-
-  sources = options.aggregate ? siblings : [source];
-  options.outSourceMap = path.basename(target + '.map');
+  options.outSourceMap = Path.basename(target + '.map');
 
   var result = UglifyJS.minify(sources, options);
-  async.forEach([{
-    path: target,
-    content: [result.code, '//@ sourceMappingURL=' + options.outSourceMap].join('\n\n')
-  }, {
-    path: target + '.map',
-    content: String(result.map).split(options.documentRoot).join('/')
-  }], function(file, callback) {
-    //console.log('Writing('+file.content.length+'): ',file.path);
-    fs.writeFile(file.path, file.content, callback);
-  }, callback);
+
+  var writejs = Pea(Fs.writeFile, target, [result.code, '//@ sourceMappingURL=' + options.outSourceMap].join('\n\n'));
+  var writemap = Pea(Fs.writeFile, target+'.map', String(result.map).split(options.documentRoot).join('/'));
+  Pea.all(writejs, writemap).then(callback);
+}
+
+function individual(source, target, options, callback) {
+  return aggregate([source], target, options, callback);
+}
+
+function options(rule, callback) {
+  rule.options.documentRoot = Path.normalize(Path.resolve(rule.base, rule.options.documentRoot)+'/');
+  callback();
 }
