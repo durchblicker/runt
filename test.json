@@ -1,0 +1,46 @@
+{
+  "modules":[
+    {
+      "id":"pistachio",
+      "module":"mod/pistachio",
+      "options":{
+        "documentRoot":"html/",
+        "stripTagSpace":false
+      }
+    },
+    {
+      "id":"uglify",
+      "module":"mod/uglify",
+      "options":{
+        "documentRoot":"test/",
+        "mangle":false,
+        "compress":{}
+      }
+    },
+    {
+      "id":"concat",
+      "module":"mod/concat",
+      "options":{
+        "documentRoot":"html/",
+        "combine":"console"
+      }
+    },
+    {
+      "id":"less",
+      "module":"mod/less",
+      "options":{
+        "documentRoot":"html/",
+        "compress":{}
+      }
+    }
+  ],
+  "rules":[
+    {
+      "name":"scripts",
+      "module":"uglify",
+      "options":{ "mangle":false },
+      "source":"lib/**/*.js",
+      "target": { "search":"\\.js$", "replace":".ugly.js" }
+    }
+  ]
+}

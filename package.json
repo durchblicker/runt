@@ -1,6 +1,6 @@
 {
   "name": "runt",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "the better build system",
   "main": "runt.js",
   "author": {
@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "commander": "~1.2.0",
-    "fsevents": "~0.1.4",
     "less": "~1.4.1",
     "merge": "*",
     "minimatch": "*",
@@ -17,5 +16,11 @@
     "pistachio": "~0.2.12",
     "uglify-js": "~2.3.6",
     "glob": "~3.2.1"
+  },
+  "optionalDependencies":{
+    "fsevents": "~0.1.4"
+  },
+  "scripts":{
+    "test":"mkdir -p test && node ./runt.js --config=test.json"
   }
 }

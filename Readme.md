@@ -1,4 +1,4 @@
-# Runt - Grunt without the "Geee why does it do that"
+# Runt - Grunt without the "Geee why does it do that" [![Build Status](https://secure.travis-ci.org/phidelta/runt.png)](http://travis-ci.org/#!/phidelta/runt)
 
 Runt is a simple website development tool that helps you:
 
