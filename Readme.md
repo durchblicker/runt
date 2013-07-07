@@ -5,6 +5,7 @@ Runt is a simple website development tool that helps you:
   * [UglifyJS](https://github.com/mishoo/UglifyJS2) your scripts
   * Compile your [LessCSS](https://github.com/cloudhead/less) styles
   * Compile your [Pistachio](https://github.com/phidelta/pistachio) templates
+  * Compile you CommonJS Scripts into a single script for the browser (browserify light)
 
 It can do that simpler than Grunt and in addition it can Monitor your filesystem for changes and do a rebuild when necessary.
 Further more it will analyze the dependencies in templates (like partials) and less files (imports) that should trigger a
