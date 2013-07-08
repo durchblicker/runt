@@ -8,6 +8,7 @@ exports.dependencies = dependencies;
 var Parser = require('less').Parser;
 var Fs = require('fs');
 var Path = require('path');
+var Pea = require('pea');
 
 function individual(source, target, options, callback) {
   var parser = new Parser({
@@ -30,32 +31,33 @@ function individual(source, target, options, callback) {
 function extract(file, callback) {
   callback = arguments[arguments.length-1];
   var base = Path.dirname(file);
-  var imports = [];
-  Pea(Fs.readFile, file, 'utf-8').success(function(cnt) {
-    cnt = cnt.replace(/\/\*[\S|\s]*?\*\//,g,'\n');
+  var load = Pea(Fs.readFile, file, 'utf-8');
+  var analyze = Pea(function(callback) {
+    var cnt = this.previousValue;
+    var imports = [];
+    cnt = cnt.replace(/\/\*[\S|\s]*?\*\//g,'\n');
     cnt.split(/\r?\n/).forEach(function(line) {
-      line = line.trim().replace(/\/\/.*$/,'');
-      (/\s*\@import\s+\"([^\"]+)";/).exec(line, function(match, child) {
-        imports.push(Path.resolve(base, child));
+      line = line.trim();
+      line.replace(/\s*\@import\s+"(\S+?)"\s*;/g, function(match, child) {
+        child = Path.resolve(base, child);
+        imports.push(child);
       });
     });
-  }).failure(callback);
-  if (!imports.length) {
-    Pea.map(imports, extract).success(function(children) {
-      callback(null, Array.prototype.concat.apply(imports, children));
+    if (!imports.length) callback(null, [file]);
+    Pea.map(imports, extract).success(function(dependencies) {
+      callback(null, Array.prototype.concat.apply([ file ], dependencies));
     }).failure(callback);
-  } else {
-    callback(null, imports);
-  }
+  });
+  load.next(analyze).then(callback).error(callback);
 }
 
-function dependencies(file, options, callback) {
-  find(file, function(err, depends) {
-    if(err) return callback(err);
-    var res = {};
-    (depends || []).forEach(function(depend) {
-      res[depend] = true;
+function dependencies(templates, callback) {
+  Pea.map(templates, extract).success(function(result) {
+    var files = {};
+    result = Array.prototype.concat.apply([], result).forEach(function(file) {
+      if (!(('string' === typeof file) && file.length)) return;
+      files[file] = true;
     });
-    callback(undefined, Object.keys(res));
-  });
+    callback(null, Object.keys(files).sort());
+  }).failure(callback);
 }
