@@ -12,10 +12,13 @@ var Fs = require('fs');
 var UglifyJS = require('uglify-js');
 
 var REQUIRE=/\brequire\s*\(\s*(["|'])(\S+?)\1\s*\)/g;
+var DEBUG = function(){};
 
 function individual(source, target, options, callback) {
+  DEBUG('indiviual', source);
   var modules = {};
   Pea(load, source, modules).next(Pea(order, modules)).done(function(modules) {
+    DEBUG('load-order-done', source);
     Pea(compile, modules, options).next(Pea(link, modules, options)).done(function(assembly) {
       Pea.Soup.stir([
         Pea(Fs.writeFile, target, assembly.code+'\n\n//@ sourceMappingURL='+Path.basename(target, '.js')+'.map?t='+Date.now()),
@@ -49,13 +52,16 @@ function options(rule, callback) {
 }
 
 function load(file, modules, callback) {
+  DEBUG('load', file);
   if (modules[file]) return callback(null, modules);
   Pea(Fs.readFile, file, 'utf-8').done(function(content) {
+    DEBUG('load-read', file);
     Pea(parse, file, content, modules).then(callback);
   }).fail(callback);
 }
 
 function parse(file, content, modules, callback) {
+  DEBUG('parse', file);
   var required = {};
   modules[file] = {
     file:file,
@@ -64,8 +70,10 @@ function parse(file, content, modules, callback) {
   };
   content.replace(REQUIRE, function(match, quote, name) { required[name] = true });
   Pea.map(Object.keys(required), findrequire, Path.dirname(file), modules).done(function(resolved) {
+    DEBUG('parse-resolved', file);
     resolved.forEach(function(module) { required[module.name] = module.path; });
     Pea.map(values(required), load, modules).done(function() {
+      DEBUG('parse-loaded', file);
       callback(null, modules);
     }).fail(callback);
   }).fail(callback);
@@ -73,10 +81,10 @@ function parse(file, content, modules, callback) {
 
 function findrequire(name, base, modules, callback) {
   base = base.split('/');
-  file = (!Path.extname(name).length) ? (name + '.js') : name;
+  var file = (!Path.extname(name).length) ? (name + '.js') : name;
   var options = [];
   while(base.length)  {
-    options.push(base.concat(file).join('/'));
+    options.push(Path.normalize(base.concat(file).join('/')));
     base.pop();
   }
   Pea.first(options, stat).done(function(stat) {
@@ -84,7 +92,9 @@ function findrequire(name, base, modules, callback) {
     Pea(load, stat.path, modules).done(function(modules) {
       callback(null, { name:name, path:stat.path });
     }).fail(callback);
-  }).fail(callback);
+  }).fail(function(err) {
+    callback(new Error('could not find require("'+name+'")'));
+  });
 }
 
 function stat(path, callback) {
