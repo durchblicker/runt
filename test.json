@@ -3,44 +3,53 @@
     {
       "id":"pistachio",
       "module":"mod/pistachio",
-      "options":{
-        "documentRoot":"html/",
-        "stripTagSpace":false
-      }
+      "options":{ "stripTagSpace":false }
     },
     {
       "id":"uglify",
       "module":"mod/uglify",
-      "options":{
-        "documentRoot":"test/",
-        "mangle":false,
-        "compress":{}
-      }
+      "options":{ "mangle":false, "compress":{} }
+    },
+    {
+      "id":"commonjs",
+      "module":"mod/commonjs.js",
+      "options":{ "mangle":false, "compress":{} }
     },
     {
       "id":"concat",
       "module":"mod/concat",
-      "options":{
-        "documentRoot":"html/",
-        "combine":"console"
-      }
+      "options":{ "combine":"console" }
     },
     {
       "id":"less",
       "module":"mod/less",
-      "options":{
-        "documentRoot":"html/",
-        "compress":{}
-      }
+      "options":{ "compress":{} }
     }
   ],
   "rules":[
     {
-      "name":"scripts",
+      "name":"uglify",
       "module":"uglify",
-      "options":{ "mangle":false },
-      "source":"lib/**/*.js",
-      "target": { "search":"\\.js$", "replace":".ugly.js" }
+      "options":{ "documentRoot":"test/" },
+      "source":[
+        "test/ugly.js",
+        "test/other.js"
+      ],
+      "target": "test/result/uglified.js"
+    },
+    {
+      "name":"commonjs",
+      "module":"commonjs",
+      "options":{ "sourceRoot":"test/" },
+      "source":"test/common.js",
+      "target": "test/result/commonified.js"
+    },
+    {
+      "name":"less",
+      "module":"less",
+      "options":{ "documentRoot":"test/" },
+      "source":"test/less.less",
+      "target": "test/result/lessified.css"
     }
   ]
 }

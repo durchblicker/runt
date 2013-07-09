@@ -2,170 +2,206 @@
 ** © 2013 by Philipp Dunkel <p.dunkel@me.com>. Licensed under MIT License.
 */
 
-exports.individual = individual
-exports.options = options;
-exports.dependencies = dependencies;
+exports.individual=individual;
+exports.dependencies=dependencies;
+exports.options=options;
 
-var UglifyJS = require('uglify-js');
+var Pea = require('pea');
 var Path = require('path');
 var Fs = require('fs');
-var Pea = require('pea');
+var UglifyJS = require('uglify-js');
+
+var REQUIRE=/\brequire\s*\(\s*(["|'])(\S+?)\1\s*\)/g;
 
 function individual(source, target, options, callback) {
-  resolve({}, source, function(err, modules) {
-    if (err) return callback(err);
+  var modules = {};
+  Pea(load, source, modules).next(Pea(order, modules)).done(function(modules) {
+    Pea(compile, modules, options).next(Pea(link, modules, options)).done(function(assembly) {
+      Pea.Soup.stir([
+        Pea(Fs.writeFile, target, assembly.code+'\n\n//@ sourceMappingURL='+Path.basename(target, '.js')+'.map?t='+Date.now()),
+        Pea(Fs.writeFile, Path.join(Path.dirname(target), Path.basename(target, '.js')+'.map'), assembly.map)
+      ]).then(callback);
+    }).error(callback)
+  }).error(callback);
+}
 
-    modules = Object.keys(modules).map(function(file) {
-      modules[file].name = file.substr((options.sourceRoot||'').length);
-      modules[file].source = (options.sourcePrefix||'')+modules[file].source;
-      Object.keys(modules[file].names).forEach(function(name) {
-        modules[file].names[name] = modules[file].names[name].substr((options.sourceRoot||'').length);
+
+
+function dependencies(files, callback) {
+  Pea.map(files, load, {}).done(function(modules) {
+    var list = Object.keys(modules);
+    var index = {};
+    list.forEach(function(file) {
+      index[file]=Object.keys(modules[file].required).map(function(name) {
+        return modules[file].required[name]
       });
-      return modules[file];
-    }).filter(function(module) { return !!module; });
-    modules = order(modules);
-    modules = modules.map(assemble);
-
-    if (!options.norequire) modules.unshift({ name:'<require>', file:'<require>', uglify:requirefunc(), source:'function() { [magic] }' });
-    var top = null;
-    var sources = {};
-    try {
-      modules.forEach(function(module, idx) {
-        if (idx && !top) return;
-        var name = (module.file==='<require>')?'<require>':module.file.substr((options.sourceRoot||'').length);
-        sources[name] = module.source;
-        try {
-          top = UglifyJS.parse(module.uglify, { filename:name , toplevel: top });
-        } catch(ex) {
-          throw(new Error('Syntax Error: '+module.file));
-        }
-      });
-    } catch(err) {
-      return callback(err);
-    }
-    if (!top) return callback(new Error('Compile Error'));
-    top.figure_out_scope();
-    top = top.transform(UglifyJS.Compressor(options.compress));
-    if (options.mangle !== false) {
-      top.figure_out_scope();
-      top.compute_char_frequency();
-      top.mangle_names();
-    }
-    var map = UglifyJS.SourceMap();
-    var stream = UglifyJS.OutputStream({ source_map:map });
-
-    top.print(stream);
-    top = { code:stream.toString(), map:JSON.parse(map.toString()) };
-    top.map.sourcesContent = top.map.sources.map(function(src) { return sources[src]; });
-    top.map=JSON.stringify(top.map);
-
-    Fs.writeFile(target, top.code+'\n\n'+'//@ sourceMappingURL='+Path.basename(target, '.js')+'.map?t='+Date.now(), function(err) {
-      if (err) return callback(err);
-      Fs.writeFile(Path.resolve(Path.dirname(target), Path.basename(target, '.js')+'.map'), top.map, callback);
     });
-  });
+    list.forEach(function(file) {
+      var last;
+      do {
+        last = index[file].length;
+        index[file].forEach(function(req) {
+          index[file] = index[file].concat(index[req]);
+        });
+        index[file] = unique(index[file]);
+      } while(last !== index[file].length)
+    });
+    callback(list, index);
+  }).fail(callback)
 }
 
 function options(rule, callback) {
-  rule.options.sourceRoot = Path.normalize(Path.resolve(rule.base, rule.options.sourceRoot));
+  rule.options.sourceRoot = Path.normalize(Path.resolve(rule.base, rule.options.sourceRoot)+'/');
   callback();
 }
 
-function dependencies(source, options, callback) {
-  var modules={};
-  resolve(modules, source, function(err, modules) {
-    if (err) return callback(err);
-    callback(null, Object.keys(modules));
+function load(file, modules, callback) {
+  if (modules[file]) return callback(null, modules);
+  Pea(Fs.readFile, file, 'utf-8').done(function(content) {
+    Pea(parse, file, content, modules).then(callback);
+  }).fail(callback);
+}
+
+function parse(file, content, modules, callback) {
+  var required = {};
+  modules[file] = {
+    file:file,
+    content:content,
+    required:required
+  };
+  content.replace(REQUIRE, function(match, quote, name) { required[name] = true });
+  Pea.map(Object.keys(required), findrequire, Path.dirname(file), modules).done(function(resolved) {
+    resolved.forEach(function(module) { required[module.name] = module.path; });
+    Pea.map(values(required), load, modules).done(function() {
+      callback(null, modules);
+    }).fail(callback);
+  }).fail(callback);
+}
+
+function findrequire(name, base, modules, callback) {
+  base = base.split('/');
+  file = (!Path.extname(name).length) ? (name + '.js') : name;
+  var options = [];
+  while(base.length)  {
+    options.push(base.concat(file).join('/'));
+    base.pop();
+  }
+  Pea.first(options, stat).done(function(stat) {
+    if (modules[stat.path]) return callback(null, { name:name, path:stat.path });
+    Pea(load, stat.path, modules).done(function(modules) {
+      callback(null, { name:name, path:stat.path });
+    }).fail(callback);
+  }).fail(callback);
+}
+
+function stat(path, callback) {
+  Fs.stat(path, function(err, stat) {
+    if (err || !stat) return callback(err || new Error('no stat'));
+    stat.path = path;
+    callback(null, stat);
   });
 }
 
-function resolve(modules, source, callback) {
-  callback = arguments[arguments.length-1];
-  if (!!modules[source]) return callback(null, modules);
-  Pea(Fs.readFile, source, 'utf-8').success(function(content) {
-    var paths = [];
-    content.replace(/\brequire\s*\(\s*("|')([\s|\S]+?)\1\s*\)/g, function(match, quote, name) { paths.push(name); return match; });
-    Pea.map(paths, find, Path.dirname(source)).success(function(paths) {
-      var module = {};
-      var names = {};
-      (paths||[]).forEach(function(path) {
-        module[path.file] = true;
-        names[path.name] = path.file;
-      });
-      module = { file:source, source:content, dependencies:Object.keys(module), names:names };
-
-      modules[module.file] = module;
-      paths = module.dependencies.filter(function(path) { return !modules[path.file]; });
-      Pea.each(paths, resolve, modules).success(function() {
-        callback(null, modules)
-      }).failure(callback);
-    }).failure(callback);
-  }).failure(callback);
+function unique(array) {
+  var result = {};
+  array.forEach(function(key) { result[key]=true; });
+  return Object.keys(result);
 }
 
-function find(base, name, callback) {
-  callback = arguments[arguments.length-1];
-  var file = (!Path.extname(name).length) ? (name + '.js') : name;
-  Fs.stat(Path.resolve(base, file), function(err, stat) {
-    if (err || !stat || stat.isDirectory()) {
-      base = Path.dirname(base);
-      if (base.length > 2) return find(base, name, callback);
-      return callback(new Error('source not found: '+name));
-    }
-    var res = {
-      name: name,
-      file: Path.resolve(base, file)
-    };
-    return callback(null, res);
+function values(object) {
+  return Object.keys(object).map(function(key) {
+    return object[key];
   });
 }
 
-function order(modules) {
-  var result = [], cnt=100;
-  while (modules.length && cnt) {
-    modules = modules.filter(function(module, idx) {
-      var fulfilled = !module.dependencies.filter(function(depend) {
-        return !result.filter(function(module) { return module.file===depend; }).length;
-      }).length;
-      //console.error(cnt, module.file, fulfilled, module.dependencies, result.map(function(m) { return m.file; }));
-      if (!fulfilled) return true;
-      result.push(module);
+function order(modules, callback) {
+  mods = values(modules);
+  var result=[];
+  var rounds = 100;
+  while (mods.length && rounds) {
+    mods = mods.filter(function(module) {
+      if (!fulfilled(result, values(module.required))) return true;
+      result.push(module.file);
       return false;
     });
-    cnt-=1;
+    rounds -= 1;
   }
-  if (modules.length) throw(new Error('could not order dependencies'));
-  return result;
+  if (mods.length) return callback(new Error('could not order dependencies'));
+  result = result.map(function(file) { return modules[file]; });
+  callback(null, result);
 }
-
-function assemble(module) {
-  callback=arguments[arguments.length-1];
-  module.uglify = module.source.replace(/\brequire\s*\(\s*("|')([\s|\S]+?)\1\s*\)/g, function(match, quote, name) {
-    return ['require(', module.names[name], ')'].join(quote);
+function fulfilled(list, dependencies) {
+  var notfound = dependencies.filter(function(item) {
+    return (list.indexOf(item) === -1);
   });
-  module.uglify = [
-    '(function() { var module={ exports:{}, names:["'+module.name+'"] }; (function(module, exports, alias, define, __filename, __dirname) {',
-    module.uglify,
-    '}(module, module.exports, function(name) { module.names.push(name); }, window.require.d, "'+module.name+'", "'+Path.dirname(module.name)+'"));for(var idx=0; idx<module.names.length; idx++) window.require.d(module.names[idx], module.exports);}())'
-  ].join('');
-  return module;
+  return !notfound.length;
 }
 
-function requirefunc() {
-  var lines = [
-     '(function(){'
-    ,'  if (window.require && window.require.d) return;'
-    ,'  var m={};'
-    ,'  function require(n) {'
-    ,'    if(n===undefined) return m;'
-    ,'    if (!m[n]) { throw new Error("Missing Module: "+n); }'
-    ,'    return m[n];'
-    ,'  }'
-    ,'  function define(n, e) {'
-    ,'    m[n]=e;'
-    ,'  }'
-    ,'  window.require=require; window.require.d=define;'
-    ,'}());'
-  ];
-  return lines.join('');
+function compile(modules, options, callback) {
+  var prefix=(modules.length).toString(16).split('').map(function(c) { return '0' }).join('');
+  var index = {};
+  modules.forEach(function(module, idx) {
+    module.id=(prefix+(idx+1).toString(16)).slice(-1 * prefix.length);
+    index[module.file] = module.id;
+    if (options.sourceRoot && (module.file.indexOf(options.sourceRoot)===0)) {
+      module.file = module.file.substr(options.sourceRoot.length);
+    }
+  });
+  modules.forEach(function(module) {
+    module.source = [
+      '(function() { var module={ exports:{}, names:["('+module.id+')"] }; (function(module, exports, alias, define) {',
+      module.content.replace(REQUIRE, function(match, quote, name) {
+        return ['require(', '('+index[module.required[name]]+')', ')'].join(quote);
+      }),
+      '}(module, module.exports, function(name) { module.names.push(name); }, window.require.d));for(var idx=0; idx<module.names.length; idx++) window.require.d(module.names[idx], module.exports);}())'
+    ].join('');
+  });
+  callback(null, modules);
+}
+
+function link(modules, options, callback) {
+  modules.unshift({
+    id: (modules.length).toString(16).split('').map(function(c) { return '0' }).join(''),
+    file: '<commonjs>',
+    content:[
+       '(function(){'
+      ,'  if (window.require && window.require.d) return;'
+      ,'  var m={};'
+      ,'  function require(n) {'
+      ,'    if(n===undefined) return m;'
+      ,'    if (!m[n]) { throw new Error("Missing Module: "+n); }'
+      ,'    return m[n];'
+      ,'  }'
+      ,'  function define(n, e) {'
+      ,'    m[n]=e;'
+      ,'  }'
+      ,'  window.require=require; window.require.d=define;'
+      ,'}());'
+    ].join('')
+  });
+  var top = null;
+  var sources = {};
+  try {
+    modules.forEach(function(module) {
+      sources[module.file] = module.content;
+      top = UglifyJS.parse(module.source || module.content, { filename:module.file , toplevel: top });
+    });
+  } catch(err) {
+    return callback(err);
+  }
+  if (!top) return callback(new Error('Compile Error'));
+  top.figure_out_scope();
+  top = top.transform(UglifyJS.Compressor(options.compress));
+  if (options.mangle !== false) {
+    top.figure_out_scope();
+    top.compute_char_frequency();
+    top.mangle_names();
+  }
+  var map = UglifyJS.SourceMap();
+  var stream = UglifyJS.OutputStream({ source_map:map });
+  top.print(stream);
+  top = { code:stream.toString(), map:JSON.parse(map.toString()) };
+  top.map.sourcesContent = top.map.sources.map(function(src) { return sources[src]; });
+  top.map=JSON.stringify(top.map);
+  callback(null, top);
 }
