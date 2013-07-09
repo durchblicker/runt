@@ -1,6 +1,6 @@
 {
   "name": "runt",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "description": "the better build system",
   "main": "runt.js",
   "author": {
@@ -25,6 +25,6 @@
     "fsevents": "~0.1.4"
   },
   "scripts":{
-    "test":"mkdir -p test && node ./runt.js --config=test.json"
+    "test":"rm -rf test/result && mkdir -p test/result && node ./runt.js --config=test.json --build"
   }
 }

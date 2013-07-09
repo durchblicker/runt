@@ -13,12 +13,12 @@ var Fs = require('fs');
 
 function aggregate(sources, target, options, callback) {
   var sources;
-  options.outSourceMap = Path.basename(target + '.map');
+  options.outSourceMap = Path.join(Path.dirname(target), Path.basename(target, '.js') + '.map');
 
   var result = UglifyJS.minify(sources, options);
 
   var writejs = Pea(Fs.writeFile, target, [result.code, '//@ sourceMappingURL=' + options.outSourceMap].join('\n\n'));
-  var writemap = Pea(Fs.writeFile, target+'.map', String(result.map).split(options.documentRoot).join('/'));
+  var writemap = Pea(Fs.writeFile, options.outSourceMap, String(result.map).split(options.documentRoot).join('/'));
   Pea.all(writejs, writemap).then(callback);
 }
 
