@@ -25,28 +25,21 @@ function individual(source, target, options, callback) {
   }).error(callback);
 }
 
-
-
 function dependencies(files, callback) {
   Pea.map(files, load, {}).done(function(modules) {
+    modules = modules.shift();
     var list = Object.keys(modules);
     var index = {};
     list.forEach(function(file) {
-      index[file]=Object.keys(modules[file].required).map(function(name) {
-        return modules[file].required[name]
+      var module = modules[file];
+      index[file] = index[file] || [];
+      index[file].push(file);
+      values(module.required).forEach(function(dep) {
+        index[dep] = index[dep] || [];
+        index[dep].push(file);
       });
     });
-    list.forEach(function(file) {
-      var last;
-      do {
-        last = index[file].length;
-        index[file].forEach(function(req) {
-          index[file] = index[file].concat(index[req]);
-        });
-        index[file] = unique(index[file]);
-      } while(last !== index[file].length)
-    });
-    callback(list, index);
+    callback(null, list, index);
   }).fail(callback)
 }
 
