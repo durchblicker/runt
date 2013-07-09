@@ -184,7 +184,11 @@ function link(modules, options, callback) {
   }
   if (!top) return callback(new Error('Compile Error'));
   top.figure_out_scope();
-  top = top.transform(UglifyJS.Compressor(options.compress));
+  if (options.compress !== false) {
+    options.compress = options.compress || {};
+    options.compress.warnings=false;
+    top = top.transform(UglifyJS.Compressor(options.compress));
+  }
   if (options.mangle !== false) {
     top.figure_out_scope();
     top.compute_char_frequency();

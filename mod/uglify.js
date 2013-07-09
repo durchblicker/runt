@@ -15,6 +15,10 @@ function aggregate(sources, target, options, callback) {
   var sources;
   options.outSourceMap = Path.join(Path.dirname(target), Path.basename(target, '.js') + '.map');
 
+  if (options.compress !== false) {
+    options.compress = options.compress || {};
+    options.compress.warnings=false;
+  }
   var result = UglifyJS.minify(sources, options);
 
   var writejs = Pea(Fs.writeFile, target, [result.code, '//@ sourceMappingURL=' + options.outSourceMap].join('\n\n'));
