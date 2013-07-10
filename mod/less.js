@@ -21,7 +21,7 @@ function individual(source, target, options, callback) {
       try {
         tree = tree.toCSS(options);
       } catch(ex) {
-        return callback(err);
+        return callback(ex);
       }
       Fs.writeFile(target, tree, callback);
     });
