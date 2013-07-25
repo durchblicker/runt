@@ -15,7 +15,7 @@ var REQUIRE=/\brequire\s*\(\s*(["|'])(\S+?)\1\s*\)/g;
 var DEBUG = function(){};
 
 function individual(source, target, options, callback) {
-  DEBUG('indiviual', source);
+  DEBUG('indiviual', source, target);
   var modules = {};
   Pea(load, source, modules).next(Pea(order, modules)).done(function(modules) {
     DEBUG('load-order-done', source);
