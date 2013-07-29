@@ -8,14 +8,14 @@
     "email": "p.dunkel@me.com"
   },
   "dependencies": {
-    "commander": "~1.2.0",
-    "less": "~1.4.1",
+    "commander": "*",
+    "less": "*",
     "merge": "*",
     "minimatch": "*",
     "pea": "*",
-    "pistachio": "~0.2.12",
-    "uglify-js": "~2.3.6",
-    "glob": "~3.2.1"
+    "pistachio": "*",
+    "uglify-js": "*",
+    "glob": "*"
   },
   "repository":{
     "type":"git",
