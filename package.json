@@ -1,6 +1,6 @@
 {
   "name": "runt",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "description": "the better build system",
   "main": "runt.js",
   "author": {
@@ -26,5 +26,6 @@
   },
   "scripts":{
     "test":"rm -rf test/result && mkdir -p test/result && node ./runt.js --config=test.json --build"
-  }
+  },
+  "bin" : { "runt" : "./runt.js" }
 }
