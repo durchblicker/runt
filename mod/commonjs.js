@@ -12,7 +12,7 @@ var Fs = require('fs');
 var UglifyJS = require('uglify-js');
 
 var REQUIRE=/\brequire\s*\(\s*(["|'])(\S+?)\1\s*\)/g;
-var DEBUG = function(){};
+var DEBUG = console.log.bind(console); //function(){};
 
 function individual(source, target, options, callback) {
   DEBUG('indiviual', source, target);
