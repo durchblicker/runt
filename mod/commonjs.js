@@ -12,7 +12,7 @@ var Fs = require('fs');
 var UglifyJS = require('uglify-js');
 
 var REQUIRE=/\brequire\s*\(\s*(["|'])(\S+?)\1\s*\)/g;
-var DEBUG = console.log.bind(console); //function(){};
+var DEBUG = function(){};
 
 function individual(source, target, options, callback) {
   DEBUG('indiviual', source, target);
@@ -57,7 +57,10 @@ function load(file, modules, callback) {
   Pea(Fs.readFile, file, 'utf-8').done(function(content) {
     DEBUG('load-read', file);
     Pea(parse, file, content, modules).then(callback);
-  }).fail(callback);
+  }).fail(function(err) {
+    DEBUG('load-fail', file, err);
+    callback(err);
+  });
 }
 
 function parse(file, content, modules, callback) {
@@ -75,8 +78,14 @@ function parse(file, content, modules, callback) {
     Pea.map(values(required), load, modules).done(function() {
       DEBUG('parse-loaded', file);
       callback(null, modules);
-    }).fail(callback);
-  }).fail(callback);
+    }).fail(function(err) {
+      DEBUG('load-depend-fail', file, err);
+      callback(err);
+    });
+  }).fail(function(err) {
+    DEBUG('required-fail', file, err);
+    callback(err);
+  });
 }
 
 function findrequire(name, base, modules, callback) {
